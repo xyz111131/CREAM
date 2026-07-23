@@ -1,0 +1,142 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python Debugger: train GTEX test run with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "performer/train_gtex.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--config_path",
+                "performer/configs/blood_config_test_run.yaml",
+                "--fold",
+                "0",
+                "--model_type",
+                "SingleGene",
+                "--use_test_data",
+            ]
+        },
+        {
+            "name": "Python Debugger: train GTEX single geneset with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": [
+                "--config_path",
+                "performer/configs/blood_config_test.yaml",
+                "--fold",
+                "0",
+                "--model_type",
+                "SingleGeneSet",
+            ]
+        },
+        {
+            "name": "Python Debugger: train GTEX geneset with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": [
+                "--config_path",
+                "performer/configs/blood_config_test.yaml",
+                "--fold",
+                "0",
+                "--model_type",
+                "MultiGeneSet",
+            ]
+        },
+        {
+            "name": "Python Debugger: eval GTEX with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "performer/test_gtex.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--config_path",
+                "configs/blood_config0-5-shift-diff.yaml",
+                "--fold",
+                "1",
+                "--model_type",
+                "MultiGene",
+                "--runid",
+                "c92158vx",
+            ]
+        },
+        {
+            "name": "Python Debugger: train GTEX lora with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "performer/train_gtex_lora.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--config_path",
+                "performer/configs/blood_config_test.yaml",
+                "--config_path_lora",
+                "performer/lora_code/configs/blood_config_lora_only.yaml",
+                "--fold",
+                "0",
+                "--model_type",
+                "SingleGene",
+            ]
+        },
+        {
+            "name": "Python Debugger: train GTEX with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "performer/train_gtex2.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--config_path",
+                "performer/configs/blood_config_test.yaml",
+                "--fold",
+                "1",
+                "--model_type",
+                "MultiGene",
+                "--num_gpus",
+                "1",
+            ]
+        },
+        {
+            "name": "Python Debugger: ISM genes Performer with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "performer/ism_performer0.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--path_to_metadata",
+                "performer/wandb/run-20250525_094514-gl9h617j/files/config.yaml",
+                "--path_to_genes_file",
+                "data/genes/good_train_genes.txt", 
+                "--model_type",
+                "MultiGene",
+            ]
+        },
+        {
+            "name": "Python Debugger: ISM variants Performer with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "performer/ism_performer.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--path_to_metadata",
+                "performer/wandb/run-20250419_144530-1s4gqfj7/files/config.yaml",
+                "--path_to_variants_file",
+                "data/rare_variants_folds/select_genotype-fold1.txt",
+                "--model_type",
+                "MultiGene",
+            ]
+        },
+    ]
+}

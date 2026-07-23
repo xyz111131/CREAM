@@ -1,0 +1,25 @@
+seq_length: 12288
+learning_rate: 5e-6
+train_batch_size: 2
+num_individuals_per_gene: 2
+alpha: 0.5
+experiment_name: "test"
+max_epochs: 6
+precision: bf16-mixed
+# precision: 64
+tissues_to_train: "Whole Blood"
+gradient_clip_val: 0.05
+seed: 0
+version: 0
+mask_dna_prop: 0
+discretize_bins: 0
+contrast_embed: 1
+stratify_expr: 0
+residual_expr: 0
+raw_expr: 0
+gene_embed: 0
+atten_pool: 1
+attn_dim: 512
+attn_heads: 4
+shift: 100
+reverse_complement: 0

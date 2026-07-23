@@ -5,7 +5,7 @@ Contrastive Regulatory Embedding Attention Model (CREAM) is a computational fram
 
 
 <p align="center">
-  <img src="Figure0.pdf" alt="Model architecture" width="500">
+  <img src="Figure0-1.png" alt="Model architecture" width="500">
 </p>
 
 The main features of CREAM include:

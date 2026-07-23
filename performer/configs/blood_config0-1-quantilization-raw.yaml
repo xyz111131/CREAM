@@ -1,0 +1,19 @@
+seq_length: 49152
+learning_rate: 1e-5
+train_batch_size: 32
+num_individuals_per_gene: 64
+alpha: 0.5
+experiment_name: "FinalPaperWholeBlood_quantize"
+max_epochs: 100
+precision: bf16-mixed
+tissues_to_train: "Whole Blood"
+gradient_clip_val: 0.05
+seed: 0
+mask_dna_prop: 0
+discretize_bins: 5
+contrast_embed: 0
+stratify_expr: 32
+residual_expr: 0
+raw_expr: 1
+gene_embed: 0
+atten_pool: 1

@@ -1,0 +1,19 @@
+peft:
+  r: 8
+  lora_alpha: 16
+  target_modules: "all-linear"
+  lora_dropout: 0.05
+  bias: "lora_only"
+
+conv1D:
+  alpha: 4
+  rank: 2
+  delta_bias: True
+  beta: 1.75
+
+conv2D:
+  alpha: 8
+  rank: 4
+  rank_for: 'channels'
+  delta_bias: True
+  beta: 1.75

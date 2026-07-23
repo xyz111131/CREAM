@@ -1,0 +1,10 @@
+{
+    "r.rpath.linux": "/pollard/home/zhhu/miniconda3/envs/archR/lib/R/bin/R",
+    "r.plot.useHttpgd": false,
+    "r.libPaths": [
+        "/pollard/home/zhhu/miniconda3/envs/archR/lib/R"
+    ],
+    "r.rterm.linux": "/pollard/home/zhhu/miniconda3/envs/archR/bin/radian",
+    "python-envs.defaultEnvManager": "ms-python.python:conda",
+    "python-envs.defaultPackageManager": "ms-python.python:conda"
+}

@@ -15,18 +15,18 @@
 source activate enformer-pytorch-dev
 export CUBLAS_WORKSPACE_CONFIG=:4096:8
 
-config_path=performer/wandb/run-20250419_144530-1zw1vgdj/files/config.yaml
+config_path=CREAM/wandb/run-20250419_144530-1zw1vgdj/files/config.yaml
 variants_path=data/rare_variants_folds/select_genotype-fold2.txt
 model_type=MultiGene
-python performer/ism_performer.py --path_to_metadata $config_path --model_type $model_type --path_to_variants_file $variants_path
+python CREAM/ism_cream.py --path_to_metadata $config_path --model_type $model_type --path_to_variants_file $variants_path
 
 
-config_path=performer/wandb/run-20250419_144530-b4ihfjbn/files/config.yaml
+config_path=CREAM/wandb/run-20250419_144530-b4ihfjbn/files/config.yaml
 variants_path=data/rare_variants_folds/select_genotype-fold3.txt
 model_type=MultiGene
-python performer/ism_performer.py --path_to_metadata $config_path --model_type $model_type --path_to_variants_file $variants_path
+python CREAM/ism_cream.py --path_to_metadata $config_path --model_type $model_type --path_to_variants_file $variants_path
 
-config_path=performer/wandb/run-20250419_144530-aaipwoio/files/config.yaml
+config_path=CREAM/wandb/run-20250419_144530-aaipwoio/files/config.yaml
 variants_path=data/rare_variants_folds/select_genotype-fold4.txt
 model_type=MultiGene
-python performer/ism_performer.py --path_to_metadata $config_path --model_type $model_type --path_to_variants_file $variants_path
+python CREAM/ism_cream.py --path_to_metadata $config_path --model_type $model_type --path_to_variants_file $variants_path

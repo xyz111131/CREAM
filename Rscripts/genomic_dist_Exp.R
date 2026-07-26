@@ -55,7 +55,7 @@ for(gn in gns$V1)
 par(mfrow = c(3,2), mar = c(4,4,3,1))
 for(gn in gns$V1)
 {
-    ism = read.csv(paste0('results/PerformerISM/Whole_BloodModels/MultiGene/5adchjbf_1/5adchjbf_', gn, '_ContrastMultiAttention_49152bp.csv'))
+    ism = read.csv(paste0('results/CREAM_ISM/Whole_BloodModels/MultiGene/5adchjbf_1/5adchjbf_', gn, '_ContrastMultiAttention_49152bp.csv'))
     ism$variant_id = paste(ism$chrom, ism$pos0+1, ism$ref, ism$alt, sep='_')
     #ism$chrom = sub('chr', '', ism$chrom)
     #ism$chrom = as.numeric(ism$chrom)
@@ -105,5 +105,5 @@ for(gn in gns$V1)
 
 gn = 'CDS2'
 dat = genotype_all[genotype_all$gene_name == gn, ]
-ism = read.csv(paste0('results/PerformerISM/Whole_BloodModels/MultiGene/5adchjbf/5adchjbf_', gn, '_ContrastMultiAttention_49152bp.csv'))
+ism = read.csv(paste0('results/CREAM_ISM/Whole_BloodModels/MultiGene/5adchjbf/5adchjbf_', gn, '_ContrastMultiAttention_49152bp.csv'))
 dat[which(dat[,'GTEX-T5JW']!=dat[, 'GTEX-XUW1']),'pos1'] - (ism$region_start[1] + ism$region_end[1])/2

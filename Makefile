@@ -1,4 +1,4 @@
 .PHONY: fix
 
 fix:
-	@black performer/ --line-length 100
+	@black CREAM/ --line-length 100

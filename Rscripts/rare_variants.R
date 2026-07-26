@@ -3,7 +3,7 @@ library(data.table)
 library(tidyr)
 library(ggplot2)
 runids = c('1s4gqfj7', '1zw1vgdj', 'b4ihfjbn', 'aaipwoio')
-res_dir = 'results/PerformerISM_rarevarints/Whole_BloodModels/MultiGene/'
+res_dir = 'results/CREAM_ISM_rarevarints/Whole_BloodModels/MultiGene/'
 dat_dir = 'data/rare_variants_folds/'
 results_all = NULL
 for(i in 1:4)

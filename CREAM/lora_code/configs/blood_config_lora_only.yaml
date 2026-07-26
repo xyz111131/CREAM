@@ -1,6 +1,0 @@
-peft:
-  r: 8
-  lora_alpha: 16
-  target_modules: "all-linear"
-  lora_dropout: 0.05
-  bias: "lora_only"

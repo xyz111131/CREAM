@@ -1,3 +1,5 @@
+# adapted from Performer: https://github.com/shirondru/enformer_fine_tuning/tree/master/code 
+
 import gc
 import os
 
@@ -14,6 +16,7 @@ import random
 import lightning.pytorch as pl
 from torch.utils.data import IterableDataset, DataLoader
 from CREAM.models.contrast_wrapper_attention_multiheads import ContrastWrapperAttention
+from CREAM import config as cream_config
 import yaml
 
 
@@ -38,15 +41,12 @@ def get_window_around_TSS(window, gene_info):
     return region
 
 
-def get_all_gtex_snps(variant_row, window=10000):
+def get_all_gtex_snps(variant_row, window=10000, config=None):
     """
     Gets all observed GTEx SNPs within +/- window distance from gene TSS and puts into a df with position, ref and alt for ISM
     """
-    cwd = os.getcwd()
-    DATA_DIR = os.path.join(cwd, "data")
-    enformer_regions = pd.read_csv(
-        os.path.join(DATA_DIR, "Enformer_genomic_regions_TSSCenteredGenes_FixedOverlapRemoval.csv")
-    )
+    config = config if config is not None else cream_config.load_config()
+    enformer_regions = pd.read_csv(cream_config.enformer_intervals_file(config))
     gene = variant_row["gene_name"]
     samples = []
     if not pd.isna(variant_row["het_donors"]):
@@ -91,11 +91,13 @@ def get_ckpt(save_dir):
         return None
 
 
-def get_single_GTEx_donor_sequence(gtex_id, region_chr, region_start, region_end, desired_seq_len):
+def get_single_GTEx_donor_sequence(
+    gtex_id, region_chr, region_start, region_end, desired_seq_len, config=None
+):
     # return both sequence
     # ind = random.randint(0, 1) + 1
-    consensus1_open = pysam.Fastafile(get_path_to_consensus_seq(gtex_id, 1))
-    consensus2_open = pysam.Fastafile(get_path_to_consensus_seq(gtex_id, 2))
+    consensus1_open = pysam.Fastafile(get_path_to_consensus_seq(gtex_id, 1, config))
+    consensus2_open = pysam.Fastafile(get_path_to_consensus_seq(gtex_id, 2, config))
     seq1 = consensus1_open.fetch(region_chr, region_start, region_end).upper()
     assert (
         len(seq1) == desired_seq_len
@@ -111,11 +113,14 @@ def get_single_GTEx_donor_sequence(gtex_id, region_chr, region_start, region_end
     return seq1, seq2
 
 
-def get_path_to_consensus_seq(donor_id, haplotype_num):
-    cwd = os.getcwd()
-    DATA_DIR = os.path.join(cwd, "data")
-    consensus_seq_dir = os.path.join(DATA_DIR, "ConsensusSeqs_SNPsOnlyUnphased")
-    return os.path.join(consensus_seq_dir, f"{donor_id}_consensus_H{haplotype_num}.fa")
+def get_path_to_consensus_seq(donor_id, haplotype_num, config=None):
+    config = config if config is not None else cream_config.load_config()
+    return os.path.join(
+        cream_config.consensus_seq_dir(config),
+        cream_config.consensus_seq_filename(config).format(
+            donor_id=donor_id, haplotype=haplotype_num
+        ),
+    )
 
 
 def one_hot_encode_diploid(seq1, seq2):
@@ -179,16 +184,12 @@ def one_hot_encode(sequence):
 
 
 def tss_centered_sample_sequences(
-    variant_df, desired_seq_len
+    variant_df, desired_seq_len, config=None
 ):  # variant_df contains one variants but many samples to score
-    cwd = os.getcwd()
-    DATA_DIR = os.path.join(cwd, "data")
+    config = config if config is not None else cream_config.load_config()
     gene = variant_df["gene_name"].unique().item()
 
-    # ref_seq_open = pysam.Fastafile(os.path.join(DATA_DIR,"hg38_genome.fa"))
-    enformer_regions = pd.read_csv(
-        os.path.join(DATA_DIR, "Enformer_genomic_regions_TSSCenteredGenes_FixedOverlapRemoval.csv")
-    )
+    enformer_regions = pd.read_csv(cream_config.enformer_intervals_file(config))
     gene_info = enformer_regions[enformer_regions["gene_name"] == gene]
     seq_window = (
         desired_seq_len // 2
@@ -203,7 +204,7 @@ def tss_centered_sample_sequences(
         index = variant_info["pos0"] - region_start
         sample = variant_info["donor"]
         if sample == "ref":
-            ref_seq_open = pysam.Fastafile(os.path.join(DATA_DIR, "hg38_genome.fa"))
+            ref_seq_open = pysam.Fastafile(cream_config.genome_fasta(config))
             ref_seq = ref_seq_open.fetch(region_chr, region_start, region_end).upper()
             assert (
                 ref_seq[index] == variant_info["ref"]
@@ -216,7 +217,7 @@ def tss_centered_sample_sequences(
             ref_seq_open.close()
         else:
             donor_seq1, donor_seq2 = get_single_GTEx_donor_sequence(
-                sample, region_chr, region_start, region_end, desired_seq_len
+                sample, region_chr, region_start, region_end, desired_seq_len, config
             )
             ref_seq = one_hot_encode_diploid(donor_seq1, donor_seq2)
             count = 0
@@ -473,6 +474,9 @@ def main():
     with open(args.path_to_metadata, "r") as yf:
         metadata = yaml.safe_load(yf)
 
+    # the run's own config, filled in with anything it predates from defaults.yaml
+    config = cream_config.from_wandb_metadata(metadata)
+
     model_type = args.model_type
     assert model_type in ["SingleGene", "MultiGene"]
 
@@ -481,9 +485,6 @@ def main():
         path_to_variants_file
     )  # parse_gene_files(path_to_variants_file)
 
-    cwd = os.getcwd()
-    # data_dir = os.path.join(cwd, "data")
-    outdir = os.path.join(cwd, "results/CREAM_ISM_rarevarints/")
     pl.seed_everything(0, workers=True)
     # for idx, row in metadata.iterrows():
     # run_id = row['run_id']
@@ -513,10 +514,10 @@ def main():
     model.eval()
     model.cuda()
 
-    tissue_str = (
-        tissues_to_train[0].replace(" -", "").replace(" ", "_").replace("(", "").replace(")", "")
+    tissue_str = cream_config.tissue_dirname(tissues_to_train[0])
+    outpath = cream_config.output_dir(
+        config, "ism_rare_variants_subdir", f"{tissue_str}Models", model_type, run_id
     )
-    outpath = os.path.join(outdir, f"{tissue_str}Models", model_type, run_id)
     if not os.path.exists(os.path.join(outpath)):
         os.makedirs(os.path.join(outpath))
 
@@ -529,12 +530,12 @@ def main():
         variant_id = variant_sample["variant_id"]
         # sample = gene_sample[1]
 
-        variant_df = get_all_gtex_snps(variant_sample, window)
+        variant_df = get_all_gtex_snps(variant_sample, window, config)
         if variant_df.shape[0] > 0:  # and (
             # not os.path.exists(filename)
             # ):  # gene must be in enformer regions, must have SNPs nearby, and must not already have been evaluated
             print(f"Performing ISM on variant {variant_id} {variant_idx}/{len(variants_to_score)}")
-            it = tss_centered_sample_sequences(variant_df, desired_seq_len)
+            it = tss_centered_sample_sequences(variant_df, desired_seq_len, config)
             dataset = IsmDataset(it, length=variant_df.shape[0])
             dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
             lit_model = LitModelCREAM_ISM(model, run_id, ckpt)

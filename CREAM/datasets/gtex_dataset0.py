@@ -8,6 +8,15 @@ import pysam
 from lightning.pytorch import LightningDataModule
 from CREAM.datasets.samplers.custom_distributed_sampler import CustomDistributedSampler
 from CREAM.datasets.samplers.validation_distributed_sampler import EvalDistributedSampler
+from CREAM import config as cream_config
+
+
+def resolve_dataset_paths(paths):
+    """Accepts the dict returned by ``cream_config.dataset_paths()``, or a bare
+    data directory (older call sites), which is filled in from the defaults."""
+    if isinstance(paths, dict):
+        return paths
+    return cream_config.dataset_paths(cream_config.load_config(paths={"data_dir": str(paths)}))
 
 
 class CustomDataModule(LightningDataModule):
@@ -70,7 +79,7 @@ class GTExDataset(Dataset):
         repeat: int,
         gene_expression_df: "pandas.DataFrame",
         true_eQTLs: dict,
-        DATA_DIR: str,
+        paths: dict,
     ) -> None:
         """
         Args:
@@ -80,15 +89,18 @@ class GTExDataset(Dataset):
             num_individuals_per_gene (int): Number of people assigned to a gene for one effective gradient-accumulated batch. This is distinct from batch size and there can be more than one effective batch per gene. For example, if train batch size is 8 and num_individuals_per_gene is 128, then the next 128 // 8 = 16 consecutive batches will include the same gene and 128 people will be assigned to that gene for training during those 16 batches. If there are 512 total people with data for a given tissue, then there are 512 / 128 = 4 gradient accumulated batches for each gene per epoch, and these batches need not be consecutive (they occur randomly)
             donor_list_path (str): Path to a line-separated txt file denoting the GTEx donor IDs for use during training. There are multiple train/validation/test files for different cross validation splits.
             gene_expression_df (pandas.DataFrame): DataFrame containing gene expression data for the same single tissue as in tissues_to_train.
-            true_eQTLS (dict): dictionary of true eQTLs in different tissues.  
-            DATA_DIR (str): Directory for data storage.
+            true_eQTLS (dict): dictionary of true eQTLs in different tissues.
+            paths (dict): Resolved data paths from CREAM.config.dataset_paths().
         """
 
         assert type(requested_regions) == list
         assert type(tissues_to_train) == list
         #assert len(tissues_to_train) == 1, "Only single tissue training is currently supported"
 
-        self.DATA_DIR = DATA_DIR
+        paths = resolve_dataset_paths(paths)
+        self.paths = paths
+        self.DATA_DIR = paths["data_dir"]
+        self.consensus_seq_filename = paths["consensus_seq_filename"]
         self.desired_seq_len = desired_seq_len
         self.max_shift = shift
         self.shift_freq = shift_freq
@@ -113,11 +125,7 @@ class GTExDataset(Dataset):
 
         # define genomic regions to be used
         self.all_regions = pd.read_csv(
-            os.path.join(
-                self.DATA_DIR,
-                #"Enformer_genomic_regions_TSSCenteredGenes_FixedOverlapRemoval.csv",  # _wSNPs.txt",
-                "Gencode.v46.TSSCentered_49K_Intervals.csv",
-            ),
+            paths["genomic_intervals_file"],
             sep=",",  # "\t"
         )
         self.all_regions['gene_name'] = self.all_regions['gene_id'].str.replace(r'\.\d+$', '', regex=True)
@@ -167,7 +175,7 @@ class GTExDataset(Dataset):
 
         if num_individuals_per_gene == -1:
             assert self.n_gene_replicate_batches_per_epoch == 1
-        self.consensus_seq_dir = os.path.join(self.DATA_DIR, "ConsensusSeqs_SNPsOnlyUnphased")
+        self.consensus_seq_dir = paths["consensus_seq_dir"]
 
         self.shuffle_and_define_epoch()
 
@@ -247,7 +255,10 @@ class GTExDataset(Dataset):
         return (one_hot_seq1 + one_hot_seq2) / 2
 
     def get_path_to_consensus_seq(self, donor_id, haplotype_num):
-        return os.path.join(self.consensus_seq_dir, f"{donor_id}_consensus_H{haplotype_num}.fa")
+        return os.path.join(
+            self.consensus_seq_dir,
+            self.consensus_seq_filename.format(donor_id=donor_id, haplotype=haplotype_num),
+        )
 
     def _get_single_GTEx_donor_sequence(self, gtex_id, region_chr, region_start, region_end, rc=0):
         consensus1_open = pysam.Fastafile(self.get_path_to_consensus_seq(gtex_id, 1))

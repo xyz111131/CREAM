@@ -1,6 +1,10 @@
 library(data.table) 
 #library(patchwork)
 library(ggplot2)
+
+# paths come from the YAML config (CREAM/configs/defaults.yaml)
+source("Rscripts/config.R")
+cream <- cream_config()
 # For simulated data, valid genes
 models = c('model1_fold0', 'model1_fold1')
 
@@ -190,12 +194,12 @@ mean(pred2plot$y_pred_bin[pred2plot$geneset == 'test_genes'] == 4) # simulated: 
 # Does the incorrect prediction to zero is becuase of that genes have excessive zeros (low snps counts or magnitude?)
 
 # read in eQTL file
-tissue_id = read.csv('../GTEX/eQTL_susie/dataset_tissue_label.csv')
+tissue_id = read.csv(cream$eqtl_tissue_label_file)
 tissue = c('Whole_Blood','Muscle_Skeletal', 'Adipose_Subcutaneous')
 ids = tissue_id[match(tissue, tissue_id$data_tissue), 'path']
 tissue_name = c("blood", "muscle", "adipose")
 coef = lapply(1:length(ids), function(i){
-  coef = fread(paste0('../GTEX/eQTL_susie/', ids[i]))
+  coef = fread(file.path(cream$eqtl_dir, ids[i]))
   coef$beta = coef$beta * coef$pip
   coef$tissue = tissue_name[i]
   return(coef)
@@ -210,7 +214,7 @@ coef[, var_type := fifelse(
 coef = coef[var_type == 'SNP']
 coef$pos = as.integer(coef$pos)
 
-intervals = fread('data/Gencode.v46.TSSCentered_49K_Intervals.csv')
+intervals = fread(cream$genomic_intervals_file)
 intervals[, gene_id := sub("\\..*$", "", gene_id)]
 
 eqtls_in_interval <- coef[

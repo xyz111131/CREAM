@@ -1,5 +1,7 @@
-eval "$(/pollard/home/sdrusinsky/miniforge3/bin/conda shell.bash hook)"
-source /pollard/home/sdrusinsky/miniforge3/bin/activate enformer_ft
+# the environment name comes from env.conda_env in CREAM/configs/defaults.yaml
+source "$(dirname "${BASH_SOURCE[0]}")/scripts/cream_env.sh"
+eval "$(conda shell.bash hook)"
+conda activate "$CREAM_CONDA_ENV"
 conda update --all
 
 conda \

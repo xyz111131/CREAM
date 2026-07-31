@@ -1,3 +1,5 @@
+# adapted from Performer: https://github.com/shirondru/enformer_fine_tuning/tree/master/code 
+
 from CREAM.train_gtex import *
 
 torch.use_deterministic_algorithms(True)

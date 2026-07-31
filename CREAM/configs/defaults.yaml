@@ -1,0 +1,130 @@
+# Default settings shared by every CREAM run.
+#
+# CREAM.config.load_config() reads this file first and merges the experiment
+# config given on the command line on top of it, so an experiment config only
+# needs to list what it changes.
+#
+# Every path below that is not absolute is resolved against paths.project_root,
+# which defaults to the repository root. Point the pipeline at a different
+# machine by editing paths.project_root here, by overriding it in an experiment
+# config, or by exporting CREAM_PROJECT_ROOT (the environment variable wins).
+
+project_name: CREAM
+
+paths:
+  # null => the repository root (the directory containing the CREAM package).
+  project_root: null
+  data_dir: data
+  test_data_dir: testdata
+  results_dir: results
+  test_results_dir: testresults
+  log_dir: logs
+  # Fine-mapped eQTL sets (used when eQTL_guided is on). Absolute, or relative
+  # to project_root. null => <data_dir>/eQTL_susie.
+  eqtl_dir: eQTL
+
+# Layout of the data directory. Templates may use {genes_subdir},
+# {gene_set_subdir}, {model_type} and {tissue}.
+data:
+  genes_subdir: genes
+  gene_set_subdir: egenes
+  gene_set_dir_template: "{genes_subdir}/{model_type}/{gene_set_subdir}"
+  # Layout used by the older per-tissue gene lists (train_gtex.py).
+  gene_set_dir_template_by_tissue: "{genes_subdir}/{tissue}/{model_type}"
+  multi_geneset_dir_template: "genesets/{tissue}/{model_type}"
+  cross_validation_subdir: cross_validation_folds
+  rare_variants_subdir: rare_variants_folds
+  consensus_seq_subdir: ConsensusSeqs_SNPsOnlyUnphased
+  genomic_intervals_file: Gencode.v46.TSSCentered_49K_Intervals.csv
+  enformer_intervals_file: Enformer_genomic_regions_TSSCenteredGenes_FixedOverlapRemoval.csv
+  genome_fasta_file: hg38_genome.fa
+  gtex_vcf_file: GTEx_Analysis_2017-06-05_v8_WholeGenomeSeq_838Indiv_Analysis_Freeze_SNPsOnly.vcf.gz
+  gene_id_mapping_file: gene_id_mapping.csv
+  gene_embedding_file: Geneformer_gene_embedding.csv.gz
+  empty_gene_file: genes/empty.txt
+  eqtl_tissue_label_file: dataset_tissue_label.csv
+  # Templates: {donor_id}, {haplotype}, {split}, {fold}, {tissue}.
+  consensus_seq_filename: "{donor_id}_consensus_H{haplotype}.fa"
+  donor_ids_filename: "person_ids-{split}-fold{fold}.txt"
+  expression_glob: "*v8.normalized_expression.bed.gz"
+  predicted_expression_glob: "*_predicted_norm_gene_expr_49K.txt"
+  expression_filename: "{tissue}.v8.normalized_expression.bed.gz"
+  residual_expression_filename: "{tissue}.v8.normalized_expression_remove_top40.bed.gz"
+  raw_expression_filename: "gene_log_tpm_2017-06-05_v8_{tissue}.gct"
+
+# Where runs and analyses write. All are relative to paths.results_dir.
+outputs:
+  # Templates: {experiment_name}, {model_type}, {train_gene_set}, {fold_dir},
+  # {run_id}.
+  run_dir_template: "{experiment_name}/{model_type}/{train_gene_set}/{fold_dir}/{run_id}"
+  fold_dirname: "Fold-{fold}"
+  rare_variants_fold_dirname: "Rare_variants_Fold-{fold}"
+  checkpoint_subdir: checkpoints
+  test_gene_subdir: train_genes
+  ism_subdir: CREAM_ISM
+  ism_rare_variants_subdir: CREAM_ISM_rarevarints
+  enformer_ism_subdir: EnformerISM
+  enformer_results_subdir: EnformerResults
+  washout_demo_subdir: variant_washout_demo
+  proximity_demo_subdir: variant_proximity_demo
+
+# Weights & Biases. Which project a run is logged to depends on how it is run.
+wandb:
+  entity: null
+  project: fine_tune_enformer_multigene_diff
+  project_raw_expr: fine_tune_enformer_multigene_raw_expr
+  project_rare_variants: rare_variants_enformer_multigene_diff
+  project_test_data: fine_tune_enformer_multigene_test_diff
+
+# Short tissue names used in configs and expression filenames -> the GTEx tissue
+# names used in the eQTL metadata.
+tissue_aliases:
+  blood: Whole_Blood
+  muscle: Muscle_Skeletal
+  adipose: Adipose_Subcutaneous
+
+# Read by the slurm submission scripts (see `python -m CREAM.config --shell`).
+env:
+  conda_env: enformer-pytorch-dev
+  cublas_workspace_config: ":4096:8"
+  train_log_subdir: train/slurm_stdout
+  test_log_subdir: test/slurm_stdout
+
+# Training defaults. Experiment configs override these.
+seq_length: 49152
+learning_rate: 1e-5
+train_batch_size: 32
+num_individuals_per_gene: 128
+alpha: 0.5
+max_epochs: 100
+precision: bf16-mixed
+gradient_clip_val: 0.05
+seed: 0
+version: 0
+tissues_to_train: "Whole Blood"
+mask_dna_prop: 0
+discretize_bins: 0
+contrast_embed: 0
+stratify_expr: 0
+residual_expr: 0
+raw_expr: 0
+predict_expr: 0
+gene_embed: 0
+eQTL_guided: 0
+atten_pool: 0
+attn_dim: 512
+attn_heads: 4
+shift: 0
+shift_freq: 0
+reverse_complement: 0
+rc_freq: 0
+pct_start: 0.3
+final_div_factor: 1
+expression_filepath: gtex_eqtl_expression_matrix
+
+# Gene list files inside the gene set directory. Set these per experiment; when
+# they are absent each script falls back to the file names it has always used
+# (e.g. valid_genes.txt / test_genes.txt for the per-tissue layout).
+# train_gene_file: train_filter_egenes_5K.txt
+# val_gene_file: val_filter_egenes_1K.txt
+# test_gene_file: test_filter_egenes_2K.txt

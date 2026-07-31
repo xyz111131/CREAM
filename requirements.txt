@@ -11,9 +11,12 @@ mkl
 rich
 torchmetrics
 
+torch==2.3.1
 enformer_pytorch
 kipoiseq
 pysam
 wandb
 vcfpy
+peft
+pyyaml
 black

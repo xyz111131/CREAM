@@ -54,8 +54,8 @@ The Enformer model is instantiated the same way as in that file:
 
 Usage
 -----
-    conda activate enformer-pytorch-dev
-    cd /pollard/data/projects/zhhu/enformer_fine_tuning_dev
+    conda activate $(python -m CREAM.config --get env.conda_env)
+    cd <repository root>
     python CREAM/demo_variant_washout.py                    # synthetic reference
     python CREAM/demo_variant_washout.py --n-trials 16      # smoother curves
     python CREAM/demo_variant_washout.py \                  # real genomic window
@@ -78,6 +78,7 @@ from enformer_pytorch import Enformer
 from CREAM.models.head_adapter_wrapper.custom_head_adapter_wrapper import (
     CustomHeadAdapterWrapper,
 )
+from CREAM import config as cream_config
 
 # one-hot base order used by kipoiseq.one_hot_dna and enformer_pytorch.str_to_one_hot
 BASES = "ACGT"
@@ -403,17 +404,29 @@ def main():
     ap.add_argument("--fasta", type=str, default=None, help="optional reference FASTA for a single real genomic window")
     ap.add_argument("--chrom", type=str, default=None)
     ap.add_argument("--start", type=int, default=None, help="0-based start of the window in --fasta")
-    ap.add_argument("--intervals", type=str, default=None,
-                    help="CSV of TSS-centred intervals (e.g. data/Gencode.v46.TSSCentered_49K_Intervals.csv); "
-                         "enables real-genome sampling: one SNP per interval, averaged over --n-intervals")
+    ap.add_argument("--config_path", type=str, default=None,
+                    help="CREAM config supplying the data paths (defaults to CREAM/configs/defaults.yaml)")
+    ap.add_argument("--intervals", type=str, nargs="?", default=None, const="",
+                    help="CSV of TSS-centred intervals; pass without a value to use the intervals file "
+                         "from the config. Enables real-genome sampling: one SNP per interval, "
+                         "averaged over --n-intervals")
     ap.add_argument("--n-intervals", type=int, default=100, help="number of intervals to randomly sample in --intervals mode")
     ap.add_argument("--random-anchor", action="store_true",
                     help="in --intervals mode, place each interval's SNP at a random central position instead of the TSS")
-    ap.add_argument("--genome-fasta", type=str,
-                    default=os.path.join(os.path.dirname(__file__), "..", "data", "hg38_genome.fa"),
-                    help="reference genome FASTA used to fetch interval windows")
-    ap.add_argument("--outdir", type=str, default=os.path.join(os.path.dirname(__file__), "results", "variant_washout_demo"))
+    ap.add_argument("--genome-fasta", type=str, default=None,
+                    help="reference genome FASTA used to fetch interval windows "
+                         "(defaults to the one named in the config)")
+    ap.add_argument("--outdir", type=str, default=None,
+                    help="output directory (defaults to outputs.washout_demo_subdir in the config)")
     args = ap.parse_args()
+
+    config = cream_config.load_config(args.config_path)
+    if args.intervals == "":
+        args.intervals = cream_config.genomic_intervals_file(config)
+    if args.genome_fasta is None:
+        args.genome_fasta = cream_config.genome_fasta(config)
+    if args.outdir is None:
+        args.outdir = cream_config.output_dir(config, "washout_demo_subdir")
 
     os.makedirs(args.outdir, exist_ok=True)
     rng = np.random.default_rng(args.seed)

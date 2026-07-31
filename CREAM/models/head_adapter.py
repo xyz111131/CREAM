@@ -1,3 +1,5 @@
+# adapted from Performer: https://github.com/shirondru/enformer_fine_tuning/tree/master/code 
+
 from CREAM.models.lit_model import LitModel
 
 

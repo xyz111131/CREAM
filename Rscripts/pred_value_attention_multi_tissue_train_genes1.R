@@ -4,6 +4,10 @@ library(data.table)
 library(parallel)
 library(ggplot2)
 
+# paths come from the YAML config (CREAM/configs/defaults.yaml)
+source("Rscripts/config.R")
+cream <- cream_config()
+
 
 source('Rscripts/utility_functions1.R')
 
@@ -335,13 +339,13 @@ dev.off()
 # variants (MAF >~ 1%, even at low pip), so no de novo SNV is ever a tested/fine-mapped eQTL.
 # Switching from pip>0.5 to all pip does not change this (rarity, not pip, is the limiter).
 # This block documents that and still runs the split if the intersection is ever non-empty.
-eqtl_dir   = '/pollard/data/projects/zhhu/GTEX/eQTL_susie/'
-tissue_lab = read.csv(paste0(eqtl_dir, 'dataset_tissue_label.csv'))
+eqtl_dir   = cream$eqtl_dir
+tissue_lab = read.csv(cream$eqtl_tissue_label_file)
 eqtl_map   = data.table(data_tissue = c('Whole_Blood', 'Muscle_Skeletal', 'Adipose_Subcutaneous'),
                         tissue      = c('blood', 'muscle', 'adipose'))
 eqtl_map[, path := tissue_lab$path[match(data_tissue, tissue_lab$data_tissue)]]
 eqtl_sets = rbindlist(lapply(seq_len(nrow(eqtl_map)), function(k) {
-    cs = fread(paste0(eqtl_dir, eqtl_map$path[k]), select = c('gene_id', 'variant')) # all credible-set variants, any pip
+    cs = fread(file.path(eqtl_dir, eqtl_map$path[k]), select = c('gene_id', 'variant')) # all credible-set variants, any pip
     unique(cs[, .(gene_name = gene_id, variant_id = variant, tissue = eqtl_map$tissue[k])])
 }))
 
@@ -437,7 +441,7 @@ atten = lapply(c(2,6), function(i){ #1:3
     }
 })
 # obtain ground truth eQTLs for each tissue
-tissue_id = read.csv('../GTEX/eQTL_susie/dataset_tissue_label.csv')  
+tissue_id = read.csv(cream$eqtl_tissue_label_file)
 tissue = c('Whole_Blood','Muscle_Skeletal', 'Adipose_Subcutaneous')
 ids = tissue_id[match(tissue, tissue_id$data_tissue), 'path']
 tissue_name = tissue_id[match(tissue, tissue_id$data_tissue), 'tabix_tissue']
@@ -447,7 +451,7 @@ for(i in 1:length(ids))
 {
     id = ids[i]
     ts = tissue_name[i]
-    egenes = fread(paste0('/pollard/data/projects/zhhu/GTEX/eQTL_susie/', id))
+    egenes = fread(file.path(cream$eqtl_dir, id))
     egenes$beta2 = egenes$beta * egenes$pip
     egenes$pos = as.numeric(sapply(egenes$variant, function(x) strsplit(x, '_')[[1]][2]))
     egenes$pos0 = egenes$pos - 1
@@ -503,7 +507,7 @@ message('genes with >=1 tissue-specific eQTL variant: ', length(tissue_specific_
 # }
 
 # read intervals
-intervals = read.csv("data/Gencode.v46.TSSCentered_49K_Intervals.csv")
+intervals = read.csv(cream$genomic_intervals_file)
 
 #gn = atten$gene[1]
 

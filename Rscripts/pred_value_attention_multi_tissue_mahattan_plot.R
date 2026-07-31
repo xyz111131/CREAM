@@ -3,8 +3,12 @@ library(data.table)
 library(parallel)
 library(ggplot2)
 
+# paths come from the YAML config (CREAM/configs/defaults.yaml)
+source("Rscripts/config.R")
+cream <- cream_config()
+
 # obtain ground truth eQTLs for each tissue
-tissue_id = read.csv('../GTEX/eQTL_susie/dataset_tissue_label.csv')  
+tissue_id = read.csv(cream$eqtl_tissue_label_file)
 tissue = c('Whole_Blood','Muscle_Skeletal', 'Adipose_Subcutaneous')
 ids = tissue_id[match(tissue, tissue_id$data_tissue), 'path']
 tissue_name = tissue_id[match(tissue, tissue_id$data_tissue), 'tabix_tissue']
@@ -14,7 +18,7 @@ for(i in 1:length(ids))
 {
     id = ids[i]
     ts = tissue_name[i]
-    egenes = fread(paste0('/pollard/data/projects/zhhu/GTEX/eQTL_susie/', id))
+    egenes = fread(file.path(cream$eqtl_dir, id))
     egenes$beta2 = egenes$beta * egenes$pip
     egenes$pos = as.numeric(sapply(egenes$variant, function(x) strsplit(x, '_')[[1]][2]))
     egenes$pos0 = egenes$pos - 1
@@ -23,7 +27,7 @@ for(i in 1:length(ids))
 }
 
 # read intervals
-intervals = read.csv("data/Gencode.v46.TSSCentered_49K_Intervals.csv")
+intervals = read.csv(cream$genomic_intervals_file)
 
 ## read in attention from different runs, folds or seeds
 ids = c('kabm6xx9', 'icb2whi4', '8puj4r29', 'c1v5bhr0', 'd0sj2293', '79us58oo', 'csn3bgv7', '8uh15d1j', 'nfob6o3p')

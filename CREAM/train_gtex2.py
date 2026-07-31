@@ -1,15 +1,15 @@
+# adapted from Performer: https://github.com/shirondru/enformer_fine_tuning/tree/master/code 
+
 import argparse
-from CREAM.models.multi_genes_attention0 import MultiGeneAttentionWrapper0
 from CREAM.metrics.metric_logger import MetricLogger
 from CREAM.metrics.metric_logger_cat import MetricLogger_cat
 from CREAM.models.head_adapter_attention import HeadAdapterWrapper_Attention
 from CREAM.models.head_adapter import MultiHeadWrapper
 from CREAM.models.contrast_wrapper import ContrastWrapper
 from CREAM.models.contrast_wrapper_attention_multiheads_rev2 import ContrastWrapperAttention  #contrast_wrapper_attention_multihead0
-from CREAM.models.multi_genes_attention import MultiGeneAttentionWrapper
 from CREAM.models.head_adapter_gene_embedding import HeadAdapterGeneEmbeddingWrapper
 from CREAM.datasets.gtex_dataset0 import *
-import yaml
+from CREAM import config as cream_config
 import wandb
 import lightning.pytorch as pl
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint, LearningRateMonitor
@@ -42,22 +42,10 @@ def parse_gene_files(filepath):
 
 def prepare_genes(config):
     model_type = config["model_type"]
-    tissue = (
-        config["tissues_to_train"]
-        .replace(" -", "")
-        .replace(" ", "_")
-        .replace("(", "")
-        .replace(")", "")
-    )
-    data_dir = config["DATA_DIR"]
+    tissue = config["tissues_to_train"].split(",")[0]
 
-    train_gene_filedir = os.path.join(data_dir, "genes", model_type, "egenes")  # genesets
-    if model_type == "MultiGeneSet":
-        valid_genes = []
-        train_gene_filenames = ["120_train_genesets.txt"]
-        test_gene_path = os.path.join(data_dir, "genesets", tissue, model_type, "test_genesets.txt")
-        test_genes = parse_gene_files(test_gene_path)
-    elif model_type == "SingleGeneSet" or model_type == "SingleGene":
+    train_gene_filedir = cream_config.gene_set_dir(config, model_type)
+    if model_type == "SingleGene":
         train_gene_filenames = os.listdir(
             train_gene_filedir
         )  # if its a single gene model, there will be 1 txt file per train gene, if multi-gene it will 1 total txt file containing all genes
@@ -65,14 +53,12 @@ def prepare_genes(config):
         test_genes = []
     elif model_type == "MultiGene":
         # train_gene_filenames = os.listdir(train_gene_filedir) #if each gene set as multiple genes as a single model
-        train_gene_filenames = [config["train_gene_file"]] #["1000_train_genes.txt"]
-        val_gene_filename = config["val_gene_file"]
-        test_gene_filename = config["test_gene_file"]
-    
-        valid_gene_path = os.path.join(data_dir, "genes", model_type, "egenes", val_gene_filename) #"blood_val_filter_egenes_1K.txt"
+        train_gene_filenames = [config["train_gene_file"]]
+
+        valid_gene_path = cream_config.gene_set_path(config, config["val_gene_file"], model_type)
         valid_genes = parse_gene_files(valid_gene_path)
        #valid_genes = []
-        test_gene_path = os.path.join(data_dir, "genes", model_type, "egenes", test_gene_filename) #"blood_test_filter_egenes_1K.txt"
+        test_gene_path = cream_config.gene_set_path(config, config["test_gene_file"], model_type)
         test_genes = parse_gene_files(test_gene_path)
         #test_genes = []
 
@@ -112,38 +98,19 @@ def ensure_no_donor_overlap(train_ds, val_ds, test_ds):
 
 def define_donor_paths(config, dataset):
     if dataset == "gtex":
-        if config.rare_variants:
-            donor_dir = os.path.join(config.DATA_DIR, "rare_variants_folds")
-        else:
-            donor_dir = os.path.join(config.DATA_DIR, "cross_validation_folds", dataset, "cv_folds")
-        config.update(
-            {"train_donor_path": os.path.join(donor_dir, f"person_ids-train-fold{config.fold}.txt")}
-        )
-        config.update(
-            {"valid_donor_path": os.path.join(donor_dir, f"person_ids-val-fold{config.fold}.txt")}
-        )
-        config.update(
-            {"test_donor_path": os.path.join(donor_dir, f"person_ids-test-fold{config.fold}.txt")}
-        )
-    elif dataset == "rosmap":
-        # train and validation set are from rosmap. Test set will be individuals from gtex to enable cross-cohort evaluation
-        rosmap_dir = os.path.join(config.DATA_DIR, "cross_validation_folds", dataset)
-        config.update(
-            {
-                "train_donor_path": os.path.join(
-                    rosmap_dir, f"person_ids-train-fold{config.fold}.txt"
-                )
-            }
-        )
-        config.update(
-            {"valid_donor_path": os.path.join(rosmap_dir, f"person_ids-val-fold{config.fold}.txt")}
-        )
-
-        # using all individuals from gtex as test set. Dataset will keep only those with brain cortex data.
-        all_gtex_donor_path = os.path.join(
-            config.DATA_DIR, "cross_validation_folds", "gtex", "All_GTEx_ID_list.txt"
-        )
-        config.update({"test_donor_path": all_gtex_donor_path})
+        rare_variants = config.rare_variants
+        for split, key in (
+            ("train", "train_donor_path"),
+            ("val", "valid_donor_path"),
+            ("test", "test_donor_path"),
+        ):
+            config.update(
+                {
+                    key: cream_config.donor_list_path(
+                        config, split, config.fold, dataset, rare_variants
+                    )
+                }
+            )
     else:
         raise Exception(f"Dataset: {dataset} not supported!")
 
@@ -182,80 +149,39 @@ def load_gtex_datasets(config, train_genes, valid_genes, test_genes):
             repeat,
             gene_expression_df,
             true_eQTLs,
-            config.DATA_DIR,
-
+            cream_config.dataset_paths(config),
         )
         return ds
 
     tissues_to_train = config.tissues_to_train.split(",")  # ex: 'Whole Blood' -> ['Whole Blood]
     #assert len(tissues_to_train) == 1, "Multi-tissue training not yet supported"
-    # tissue_str = (
-    #     tissues_to_train[0].replace(" -", "").replace(" ", "_").replace("(", "").replace(")", "")
-    # )
 
-    # # load gene expression df, merge in gene names onto gene ids
-    # expression_dir = os.path.join(config.DATA_DIR, "gtex_eqtl_expression_matrix")
-    # gene_id_mapping = pd.read_csv(os.path.join(expression_dir, "gene_id_mapping.csv"))
-    # if config.residual_expr:
-    #     df_path = os.path.join(
-    #         expression_dir, f"{tissue_str}.v8.normalized_expression_remove_top40.bed.gz"
-    #     )
-    # elif config.raw_expr:
-    #     df_path = os.path.join(expression_dir, f"gene_log_tpm_2017-06-05_v8_{tissue_str}.gct")
-    # elif config.predict_expr:
-    #     df_path = os.path.join(expression_dir, f"predicted_norm_gene_expr_49K.txt")
-    # else:
-    #     df_path = os.path.join(expression_dir, f"{tissue_str}.v8.normalized_expression.bed.gz")
-
-    #gene_expression_df = pd.read_csv(df_path, sep="\t")
-
-    folder = Path(os.path.join(config.DATA_DIR, config.expression_filepath))
-    if config.predict_expr:
-        txt_files = sorted([p.name for p in folder.glob("*_predicted_norm_gene_expr_49K.txt")])
-    else:
-        txt_files = sorted([p.name for p in folder.glob("*v8.normalized_expression.bed.gz")])
+    # load one gene expression matrix per tissue. Which directory they live in and
+    # how they are named comes from the config (expression_filepath, data.*_glob)
+    expression_files = cream_config.expression_files(config, predicted=bool(config.predict_expr))
 
     gene_expression_df = {}
-    for p in txt_files:
+    for p in expression_files:
         if config.predict_expr:
-            ts = p.split('_',1)[0]
+            ts = p.name.split('_', 1)[0]
         else:
-            ts = p.split('.',1)[0]
+            ts = p.name.split('.', 1)[0]
         if ts in tissues_to_train:
-            df = pd.read_csv(os.path.join(folder,p), sep="\t")  
-            # if config.predict_expr:
-            #     df = df.reset_index().rename(columns = {'index':"Description"})
-            
-            if (not config.raw_expr) and (not config.predict_expr):
-                # gene_expression_df = gene_expression_df.merge(
-                #     gene_id_mapping, left_on="gene_id", right_on="Name"
-                # )
-                df['Description'] =  df['gene_id'].str.replace(r'\.\d+$', '', regex=True)
-            
-            gene_expression_df[ts] = df
+            df = pd.read_csv(p, sep="\t")
 
-    # load gene embedding, merge in gene names onto gene ids
-    # gene_embedding_df = pd.read_csv(
-    #     os.path.join(config.DATA_DIR, "Geneformer_gene_embedding.csv.gz"), index_col=0
-    # )  # TODO: add tissue here
-    # gene_id_mapping["Name"] = [x.split(".")[0] for x in gene_id_mapping["Name"]]
-    # gene_embedding_df = gene_embedding_df.merge(gene_id_mapping, left_index=True, right_on="Name")
+            if (not config.raw_expr) and (not config.predict_expr):
+                df['Description'] =  df['gene_id'].str.replace(r'\.\d+$', '', regex=True)
+
+            gene_expression_df[ts] = df
 
     # load eQTL metadata and files for selected tissues
     true_eQTLs = {}
-    if config.eQTL_guided: 
-        eqtl_dir = Path('/pollard/data/projects/zhhu/GTEX/eQTL_susie')
-        tissue_id = pd.read_csv(eqtl_dir / 'dataset_tissue_label.csv')
-  
+    if config.eQTL_guided:
+        eqtl_dir = Path(cream_config.eqtl_dir(config))
+        tissue_id = pd.read_csv(cream_config.eqtl_tissue_label_file(config))
+
         for tissue in tissues_to_train:
-            if tissue == 'blood':
-                tissue1 = 'Whole_Blood'
-            elif tissue == 'muscle':
-                tissue1 = 'Muscle_Skeletal'
-            elif tissue == 'adipose':
-                tissue1 = 'Adipose_Subcutaneous'
-            else:
-                tissue1 = tissue
+            tissue1 = cream_config.tissue_alias(config, tissue)
             matched = tissue_id.loc[tissue_id['data_tissue'] == tissue1]
             if matched.empty:
                 raise ValueError(f"No eQTL metadata found for tissue: {tissue}")
@@ -481,42 +407,7 @@ def train_gtex(
                 valid_genes,
                 test_genes,
             )
-    elif config.version == 0:
-        if ckpt != "":
-            model = MultiGeneAttentionWrapper0.load_from_checkpoint(ckpt)
-            # Update the learning rate
-            model.hparams.learning_rate = config.learning_rate
-        else:
-            model = MultiGeneAttentionWrapper0(
-                config.tissues_to_train.split(","),
-                config.save_dir,
-                train_ds,
-                float(config.learning_rate),
-                config.alpha,
-                config.max_epochs,
-                config.train_batch_size,
-                train_genes,
-                valid_genes,
-                test_genes,
-            )
-    else:
-        if ckpt != "":
-            model = MultiGeneAttentionWrapper.load_from_checkpoint(ckpt)
-            # Update the learning rate
-            model.hparams.learning_rate = config.learning_rate
-        else:
-            model = MultiGeneAttentionWrapper(
-                config.tissues_to_train.split(","),
-                config.save_dir,
-                train_ds,
-                float(config.learning_rate),
-                config.alpha,
-                config.max_epochs,
-                config.train_batch_size,
-                train_genes,
-                valid_genes,
-                test_genes,
-            )
+
     # wandb.watch(model, log="all", log_freq = 50)
     trainer = load_trainer(config)
     # trainer.fit(
@@ -555,23 +446,24 @@ def main():
     rare_variants = args.rare_variants
     num_gpus = args.num_gpus
 
-    os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
-
-    current_dir = os.path.dirname(__file__)
-    if use_test_data:
-        DATA_DIR = os.path.join(current_dir, "../testdata")
-    else:
-        DATA_DIR = os.path.join(current_dir, "../data")
-
-    with open(config_path, "r") as file:
-        config = yaml.safe_load(file)
-    config["model_type"] = model_type
-    config["DATA_DIR"] = DATA_DIR
+    config = cream_config.load_config(
+        config_path, use_test_data=use_test_data, model_type=model_type
+    )
+    os.environ["CUBLAS_WORKSPACE_CONFIG"] = cream_config.setting(
+        config, "env", "cublas_workspace_config"
+    )
 
     if runid != None:
-        ckpt_dir = os.path.join(
-            current_dir,
-            f"../results/{config['experiment_name']}/{model_type}/120_train_genesets/Fold-{fold}/{runid}/checkpoints/",
+        ckpt_dir = cream_config.checkpoint_dir(
+            config,
+            cream_config.run_dir(
+                config,
+                model_type=model_type,
+                train_gene_set=cream_config.gene_set_name(config["train_gene_file"]),
+                fold=fold,
+                run_id=runid,
+                rare_variants=rare_variants,
+            ),
         )
         ckpt = os.listdir(ckpt_dir)
         assert len(ckpt) == 1, "no or more than one checkpoint files"
@@ -583,57 +475,44 @@ def main():
 
     # if training a single gene model, loop through all single gene files in the dir. If its a multi gene model, there is only 1 train gene file and loop will exit after 1 iteration
     for train_gene_filename in train_gene_filenames:
-        wandb_filename = f"{config['model_type']}_{train_gene_filename.strip('.txt')}"
+        train_gene_set = cream_config.gene_set_name(train_gene_filename)
+        wandb_filename = f"{config['model_type']}_{train_gene_set}"
         train_gene_path = os.path.join(os.path.join(train_gene_filedir, train_gene_filename))
         train_genes = parse_gene_files(
             train_gene_path
         )  # will contain 1 geneset if this is a single gene set model, else it will contain ~100 genesets
 
-        if use_test_data:
-            project_name = "fine_tune_enformer_multigene_test_diff"
-        elif rare_variants:
-            project_name = "rare_variants_enformer_multigene_diff"
-        else:
-            project_name = (
-                "fine_tune_enformer_multigene_raw_expr"
-                if config["raw_expr"]
-                else "fine_tune_enformer_multigene_diff"
-            )
         #run_id = datetime.now().strftime("%m%d_%H_%M_%S%f")[:-3]
         wandb.init(
             #id = run_id,
-            project=project_name,  # multigenes_test raw_expr mae_loss
+            project=cream_config.wandb_project(
+                config,
+                use_test_data=use_test_data,
+                rare_variants=rare_variants,
+                raw_expr=config["raw_expr"],
+            ),
+            entity=cream_config.wandb_entity(config),
             name=config["experiment_name"] + f"_Fold-{fold}_" + wandb_filename,
             group=config["experiment_name"],
-            config=config,
+            config=config.to_dict(),
         )  # hhh: might return "run" and input "run" as logger in Trainer
         wandb.config.update({"fold": fold})
         wandb.config.update({"train_genes": train_genes})
         wandb.config.update({"valid_genes": valid_genes})
         wandb.config.update({"test_genes": test_genes})
 
-        if use_test_data:
-            results_dir = "testresults"
-        else:
-            results_dir = "results"
-        if rare_variants:
-            wandb.config.update(
-                {
-                    "save_dir": os.path.join(
-                        current_dir,
-                        f"../{results_dir}/{config['experiment_name']}/{model_type}/{train_gene_filename.strip('.txt')}/Rare_variants_Fold-{fold}/{wandb.run.id}",
-                    )
-                }
-            )
-        else:
-            wandb.config.update(
-                {
-                    "save_dir": os.path.join(
-                        current_dir,
-                        f"../{results_dir}/{config['experiment_name']}/{model_type}/{train_gene_filename.strip('.txt')}/Fold-{fold}/{wandb.run.id}",
-                    )
-                }
-            )
+        wandb.config.update(
+            {
+                "save_dir": cream_config.run_dir(
+                    config,
+                    model_type=model_type,
+                    train_gene_set=train_gene_set,
+                    fold=fold,
+                    run_id=wandb.run.id,
+                    rare_variants=rare_variants,
+                )
+            }
+        )
         wandb.config.update({"use_test_data": use_test_data})
         wandb.config.update({"num_gpus": num_gpus})
 

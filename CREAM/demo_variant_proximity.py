@@ -48,8 +48,8 @@ Model instantiation and the layer taps are reused from demo_variant_washout.py
 
 Usage
 -----
-    conda activate enformer-pytorch-dev
-    cd /pollard/data/projects/zhhu/enformer_fine_tuning_dev
+    conda activate $(python -m CREAM.config --get env.conda_env)
+    cd <repository root>
     python CREAM/demo_variant_proximity.py                     # synthetic reference
     python CREAM/demo_variant_proximity.py --n-anchors 6       # smoother curves
     python CREAM/demo_variant_proximity.py \                   # real genomic window
@@ -65,6 +65,7 @@ import numpy as np
 import torch
 
 # reuse the verified model / capture / encoding helpers from the washout demo
+from CREAM import config as cream_config
 from CREAM.demo_variant_washout import (
     BASES,
     CONV_LAYERS,
@@ -209,17 +210,29 @@ def main():
     ap.add_argument("--fasta", type=str, default=None, help="single real genomic window (chrom/start below)")
     ap.add_argument("--chrom", type=str, default=None)
     ap.add_argument("--start", type=int, default=None)
-    ap.add_argument("--intervals", type=str, default=None,
-                    help="CSV of TSS-centred intervals (e.g. data/Gencode.v46.TSSCentered_49K_Intervals.csv); "
-                         "each sampled interval is one anchor context (anchor SNP at the TSS)")
+    ap.add_argument("--config_path", type=str, default=None,
+                    help="CREAM config supplying the data paths (defaults to CREAM/configs/defaults.yaml)")
+    ap.add_argument("--intervals", type=str, nargs="?", default=None, const="",
+                    help="CSV of TSS-centred intervals; pass without a value to use the intervals file "
+                         "from the config. Each sampled interval is one anchor context "
+                         "(anchor SNP at the TSS)")
     ap.add_argument("--n-intervals", type=int, default=100, help="number of intervals to randomly sample in --intervals mode")
     ap.add_argument("--random-anchor", action="store_true",
                     help="in --intervals mode, place each interval's anchor SNP at a random central position instead of the TSS")
-    ap.add_argument("--genome-fasta", type=str,
-                    default=os.path.join(os.path.dirname(__file__), "..", "data", "hg38_genome.fa"),
-                    help="reference genome FASTA used to fetch interval windows")
-    ap.add_argument("--outdir", type=str, default=os.path.join(os.path.dirname(__file__), "results", "variant_proximity_demo"))
+    ap.add_argument("--genome-fasta", type=str, default=None,
+                    help="reference genome FASTA used to fetch interval windows "
+                         "(defaults to the one named in the config)")
+    ap.add_argument("--outdir", type=str, default=None,
+                    help="output directory (defaults to outputs.proximity_demo_subdir in the config)")
     args = ap.parse_args()
+
+    config = cream_config.load_config(args.config_path)
+    if args.intervals == "":
+        args.intervals = cream_config.genomic_intervals_file(config)
+    if args.genome_fasta is None:
+        args.genome_fasta = cream_config.genome_fasta(config)
+    if args.outdir is None:
+        args.outdir = cream_config.output_dir(config, "proximity_demo_subdir")
 
     os.makedirs(args.outdir, exist_ok=True)
     rng = np.random.default_rng(args.seed)

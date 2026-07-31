@@ -1,5 +1,6 @@
-from eval_enformer_gtex import *
-from ism_cream import get_all_gtex_snps, tss_centered_sequences
+from CREAM.eval_enformer_gtex import *
+from CREAM.ism_cream0 import get_all_gtex_snps, tss_centered_sequences
+from CREAM import config as cream_config
 
 torch.use_deterministic_algorithms(True)
 
@@ -27,7 +28,10 @@ def main():
         "--tissues_to_train", type=str, help="determines which enformer output will be used for ISM"
     )
     parser.add_argument("--n_center_bins", type=int)
+    parser.add_argument("--config_path", type=str, nargs="?", default=None)
     args = parser.parse_args()
+
+    config = cream_config.load_config(args.config_path)
 
     path_to_genes_file = args.path_to_genes_file
     genes_to_score = parse_gene_files(path_to_genes_file)
@@ -37,18 +41,14 @@ def main():
     tissues_to_train = parse_tissues_to_train(tissues_to_train_str)
     n_center_bins = int(args.n_center_bins)
 
-    cwd = os.getcwd()
-    DATA_DIR = os.path.join(cwd, "../data")
-    outdir = os.path.join(cwd, "results/EnformerISM")
+    outdir = cream_config.output_dir(config, "enformer_ism_subdir")
     if not os.path.exists(outdir):
         os.makedirs(outdir)
 
     enformer_tissue_names, enformer_output_dims = get_enformer_output_dim_from_tissue(
         tissues_to_train
     )
-    enformer_regions = pd.read_csv(
-        os.path.join(DATA_DIR, "Enformer_genomic_regions_TSSCenteredGenes_FixedOverlapRemoval.csv")
-    )
+    enformer_regions = pd.read_csv(cream_config.enformer_intervals_file(config))
     pl.seed_everything(0, workers=True)
     model = Enformer.from_pretrained(
         "EleutherAI/enformer-official-rough",
@@ -65,7 +65,7 @@ def main():
             outdir,
             f"{gene}_Enformer_model_ISM_{window * 2}bp_{tissues_to_train_str}_{n_center_bins}CenterBins.csv",
         )
-        variant_df = get_all_gtex_snps(gene, window)
+        variant_df = get_all_gtex_snps(gene, window, config)
         if (variant_df.shape[0] > 0) and (
             not os.path.exists(filename)
         ):  # gene must be in enformer regions, must have SNPs nearby, and must not already have been evaluated
@@ -93,7 +93,7 @@ def main():
                     "enformer_output_dim",
                 ]
             )
-            it = tss_centered_sequences(variant_df, desired_seq_len)
+            it = tss_centered_sequences(variant_df, desired_seq_len, config)
 
             with torch.no_grad():
                 for idx, example in enumerate(it):

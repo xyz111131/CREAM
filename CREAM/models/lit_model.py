@@ -1,3 +1,5 @@
+# adapted from Performer: https://github.com/shirondru/enformer_fine_tuning/tree/master/code 
+
 import lightning.pytorch as pl
 import torch
 import torch.nn as nn
@@ -248,9 +250,6 @@ class LitModel(pl.LightningModule):
     def training_step(self, batch, batch_idx, alpha=0.5):
         # x, y,genes,donor,dataloader_idx = batch
         y = batch["expr_array"]
-        weights = batch["eQTL_array"].squeeze() # B * 1 * T * L
-        tss = batch["tss"].squeeze() * weights.shape[2]
-        tss = tss[0].int()
         # if self.contrast_embed:
         #     y_hat1, y_hat2 = self(batch)
         #     loss, contrastive, mse = self.loss_fn(y_hat1, y_hat2, y, alpha)
@@ -258,6 +257,9 @@ class LitModel(pl.LightningModule):
         res = self(batch)
         y_hat = res["y"]
         if self.eQTL_guided:
+            weights = batch["eQTL_array"].squeeze() # B * 1 * T * L
+            tss = batch["tss"].squeeze() * weights.shape[2]
+            tss = tss[0].int()
             attn_weights = res.get("attn_weights")
             attn_mask = res.get("attn_mask")
             attn_inds = res.get("attn_inds")

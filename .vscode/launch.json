@@ -109,6 +109,25 @@
             ]
         },
         {
+            "name": "Python Debugger: train GTEX2 test run with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "CREAM/train_gtex2.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "--config_path",
+                "CREAM/configs/blood_config_test_run2.yaml",
+                "--fold",
+                "0",
+                "--model_type",
+                "MultiGene",
+                "--num_gpus",
+                "1",
+                "--use_test_data",
+            ]
+        },
+        {
             "name": "Python Debugger: ISM genes CREAM with Arguments",
             "type": "debugpy",
             "request": "launch",

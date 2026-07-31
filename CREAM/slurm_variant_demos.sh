@@ -6,8 +6,11 @@
 #SBATCH --cpus-per-gpu=32
 #SBATCH --mem=80G
 #SBATCH --time=12:00:00
-#SBATCH -o /pollard/data/projects/zhhu/enformer_fine_tuning_dev/logs/test/slurm_stdout/%j.out
-#SBATCH -e /pollard/data/projects/zhhu/enformer_fine_tuning_dev/logs/test/slurm_stdout/%j.err
+# stdout/stderr are written relative to the directory you run sbatch from;
+# override with `sbatch -o <dir>/%j.out -e <dir>/%j.err` (see CREAM_TRAIN_LOG_DIR /
+# CREAM_TEST_LOG_DIR from scripts/cream_env.sh)
+#SBATCH -o ../logs/test/slurm_stdout/%j.out
+#SBATCH -e ../logs/test/slurm_stdout/%j.err
 #SBATCH --job-name=variant_washout_demos
 
 # Runs the two "sparse variants are washed out by Enformer's downsampling" demos
@@ -17,24 +20,25 @@
 # Edit N_INTERVALS / EXTRA_ARGS below to taste; add --random-anchor to EXTRA_ARGS
 # to place each interval's SNP at a random central position instead of the TSS.
 
-source activate enformer-pytorch-dev
-export CUBLAS_WORKSPACE_CONFIG=:4096:8
+# project paths, conda env and CUBLAS_WORKSPACE_CONFIG come from the YAML config
+source "$(dirname "${BASH_SOURCE[0]}")/../scripts/cream_env.sh"
+source activate "$CREAM_CONDA_ENV"
 
-cd /pollard/data/projects/zhhu/enformer_fine_tuning_dev
+cd "$CREAM_PROJECT_ROOT"
 
-INTERVALS=data/Gencode.v46.TSSCentered_49K_Intervals.csv
+# --intervals without a value uses data.genomic_intervals_file from the config
 N_INTERVALS=100
 SEED=0
 EXTRA_ARGS= "--random-anchor"  #or  "--random-anchor --het"
 
-python CREAM/demo_variant_washout.py \
-    --intervals "$INTERVALS" \
+python -m CREAM.demo_variant_washout \
+    --intervals \
     --n-intervals "$N_INTERVALS" \
     --seed "$SEED" \
     $EXTRA_ARGS
 
-python CREAM/demo_variant_proximity.py \
-    --intervals "$INTERVALS" \
+python -m CREAM.demo_variant_proximity \
+    --intervals \
     --n-intervals "$N_INTERVALS" \
     --seed "$SEED" \
     $EXTRA_ARGS

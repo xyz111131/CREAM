@@ -5,6 +5,10 @@ library(data.table)
 library(parallel)
 library(ggplot2)
 
+# paths come from the YAML config (CREAM/configs/defaults.yaml)
+source("Rscripts/config.R")
+cream <- cream_config()
+
 
 source('Rscripts/utility_functions1.R')
 
@@ -367,7 +371,7 @@ dev.off()
 
 
 # obtain ground truth eQTLs for each tissue
-tissue_id = read.csv('../GTEX/eQTL_susie/dataset_tissue_label.csv')  
+tissue_id = read.csv(cream$eqtl_tissue_label_file)
 tissue = c('Whole_Blood','Muscle_Skeletal', 'Adipose_Subcutaneous')
 ids = tissue_id[match(tissue, tissue_id$data_tissue), 'path']
 tissue_name = tissue_id[match(tissue, tissue_id$data_tissue), 'tabix_tissue']
@@ -377,7 +381,7 @@ for(i in 1:length(ids))
 {
     id = ids[i]
     ts = tissue[i]
-    egenes = fread(paste0('/pollard/data/projects/zhhu/GTEX/eQTL_susie/', id))
+    egenes = fread(file.path(cream$eqtl_dir, id))
     egenes$beta2 = egenes$beta * egenes$pip
     egenes$pos = as.numeric(sapply(egenes$variant, function(x) strsplit(x, '_')[[1]][2]))
     egenes$pos0 = egenes$pos - 1
@@ -431,7 +435,7 @@ id =  'bhp8ez3y' #'a4roqha5' #'3qoubimu'
 atten_list[[2]] = fread(paste0('results/attn3_2_pred_norm_3_tissue_abs/MultiGene/rain_filter_egenes_5K/Fold-0/', id, '/', config, '_genes/Prediction_Results_-1_in_test_donors.csv'))
 
 # read intervals
-intervals = read.csv("data/Gencode.v46.TSSCentered_49K_Intervals.csv")
+intervals = read.csv(cream$genomic_intervals_file)
 intervals_dt = as.data.table(intervals)
 intervals_dt[, gene_id := sub('\\..*$', '', gene_id)]
 setkey(intervals_dt, gene_id)

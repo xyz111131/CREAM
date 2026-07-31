@@ -1,5 +1,7 @@
 .DS_Store
 __pycache__/
+.venv/
+*.egg-info/
 Rscripts/plots/
 *.ckpt
 *.rds
@@ -8,8 +10,6 @@ lightning_logs/
 wandb/
 results/
 test/
-testdata/
-testresults/
 logs/
 data/
 data/ConsensusSeqs_SNPsOnlyUnphased

@@ -345,14 +345,13 @@ class GTExDataset(Dataset):
         
         eQTL_vector = np.zeros((len(self.tissues_to_train), self.desired_seq_len), dtype=np.float32)
         # indiv_tpm = self.gene_expression_df[['#chr', 'start', 'gene_id','Description', gtex_id]]
-        any_tissue_has_eQTL = False
         for tissue_idx, tissue in enumerate(self.tissues_to_train):
             eQTL = self.true_eQTLs[tissue]
             eQTL = eQTL[eQTL['gene_id'].isin(gene_name)]
             eQTL = eQTL[eQTL['chrom'] == region_chr]
-            if len(eQTL) > 0:
-                any_tissue_has_eQTL = True
 
+            # a gene with no credible set in this tissue keeps an all-zero track; the TSS
+            # bump in LitModel.training_step then makes the target TSS-only attention
             # compute index into the sequence window from the 0-based genomic position
             indices = (eQTL['pos0'] - region_start).astype(int)
             # keep only variants that fall within the sequence window
@@ -365,9 +364,6 @@ class GTExDataset(Dataset):
             )
             eQTL_vector[tissue_idx, max_pip.index.values] = max_pip.values
 
-        assert any_tissue_has_eQTL, (
-            f"No eQTL rows found for gene(s) {gene_name} on {region_chr} in any tissue"
-        )
         return eQTL_vector
 
     def _get_gene_embedding(self, gene_name):
@@ -562,7 +558,7 @@ class GTExDataset(Dataset):
                 )
             )
             dna_vector_list.append(dna_vector)
-            expression_vector_list.append(expression_vector.squeeze())
+            expression_vector_list.append(expression_vector)  # (n_tissue,), keep the axis when there is one tissue
             if eQTL_array is not None:  # provided only when true_eQTLs are enabled
                 eQTL_vector_list.append(eQTL_array) # seq_len * number of tissue
             tss_list.append(tss)

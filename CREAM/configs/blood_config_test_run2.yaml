@@ -6,7 +6,7 @@ train_batch_size: 2
 num_individuals_per_gene: 2
 alpha: 0.5
 experiment_name: "test"
-max_epochs: 2
+max_epochs: 4
 precision: bf16-mixed
 tissues_to_train: "blood,muscle,adipose"
 gradient_clip_val: 0.05

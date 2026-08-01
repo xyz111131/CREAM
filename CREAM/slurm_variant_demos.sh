@@ -20,9 +20,9 @@
 # Edit N_INTERVALS / EXTRA_ARGS below to taste; add --random-anchor to EXTRA_ARGS
 # to place each interval's SNP at a random central position instead of the TSS.
 
-# project paths, conda env and CUBLAS_WORKSPACE_CONFIG come from the YAML config
+# project paths, virtualenv and CUBLAS_WORKSPACE_CONFIG come from the YAML config
 source "$(dirname "${BASH_SOURCE[0]}")/../scripts/cream_env.sh"
-source activate "$CREAM_CONDA_ENV"
+source "$CREAM_VENV/bin/activate"
 
 cd "$CREAM_PROJECT_ROOT"
 

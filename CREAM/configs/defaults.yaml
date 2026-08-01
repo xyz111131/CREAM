@@ -85,6 +85,10 @@ tissue_aliases:
 
 # Read by the slurm submission scripts (see `python -m CREAM.config --shell`).
 env:
+  # virtualenv the slurm scripts activate; relative paths are resolved against
+  # project_root
+  venv: .venv
+  # only used by install_reqs.sh, which still builds a conda environment
   conda_env: enformer-pytorch-dev
   cublas_workspace_config: ":4096:8"
   train_log_subdir: train/slurm_stdout

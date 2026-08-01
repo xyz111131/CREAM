@@ -189,6 +189,8 @@ def load_gtex_datasets(config, train_genes, valid_genes, test_genes):
             eqtl_filename = matched.iloc[0]['path']
             #tissue_name = matched.iloc[0]['tabix_tissue']
             eqtl_df = pd.read_csv(eqtl_dir / eqtl_filename, sep='\t')
+            if eqtl_df.empty:
+                raise ValueError(f"eQTL file {eqtl_filename} for tissue {tissue} is empty")
             variant_parts = eqtl_df['variant'].astype(str).str.split('_')
             eqtl_df['chrom'] = variant_parts.str[0]
             eqtl_df['pos'] = pd.to_numeric(variant_parts.str[1], errors='coerce')

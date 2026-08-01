@@ -12,52 +12,6 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Python Debugger: train GTEX test run with Arguments",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "CREAM/train_gtex.py",
-            "console": "integratedTerminal",
-            "args": [
-                "--config_path",
-                "CREAM/configs/blood_config_test_run.yaml",
-                "--fold",
-                "0",
-                "--model_type",
-                "SingleGene",
-                "--use_test_data",
-            ]
-        },
-        {
-            "name": "Python Debugger: train GTEX single geneset with Arguments",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "args": [
-                "--config_path",
-                "CREAM/configs/blood_config_test.yaml",
-                "--fold",
-                "0",
-                "--model_type",
-                "SingleGeneSet",
-            ]
-        },
-        {
-            "name": "Python Debugger: train GTEX geneset with Arguments",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "args": [
-                "--config_path",
-                "CREAM/configs/blood_config_test0.yaml",
-                "--fold",
-                "0",
-                "--model_type",
-                "MultiGeneSet",
-            ]
-        },
-        {
             "name": "Python Debugger: eval GTEX with Arguments",
             "type": "debugpy",
             "request": "launch",
@@ -72,23 +26,6 @@
                 "MultiGene",
                 "--runid",
                 "c92158vx",
-            ]
-        },
-        {
-            "name": "Python Debugger: train GTEX lora with Arguments",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "CREAM/train_gtex_lora.py",
-            "console": "integratedTerminal",
-            "args": [
-                "--config_path",
-                "CREAM/configs/blood_config_test.yaml",
-                "--config_path_lora",
-                "CREAM/lora_code/configs/blood_config_lora_only.yaml",
-                "--fold",
-                "0",
-                "--model_type",
-                "SingleGene",
             ]
         },
         {
@@ -109,7 +46,7 @@
             ]
         },
         {
-            "name": "Python Debugger: train GTEX2 test run with Arguments",
+            "name": "Python Debugger: train GTEX test run with Arguments",
             "type": "debugpy",
             "request": "launch",
             "program": "CREAM/train_gtex2.py",
@@ -191,7 +128,6 @@
             "request": "launch",
             "program": "Rscripts/novel_variants.py",
             "console": "integratedTerminal",
-            "python": "/pollard/home/zhhu/miniconda3/envs/enformer-pytorch-dev/bin/python",
             "cwd": "${workspaceFolder}",
             "args": [
                 "--genes",

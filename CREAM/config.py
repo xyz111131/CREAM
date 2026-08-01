@@ -462,6 +462,7 @@ def wandb_entity(config):
 # command line: let shell scripts read the same config
 # --------------------------------------------------------------------------- #
 def _shell_exports(config):
+    venv = setting(config, "env", "venv")
     return {
         "CREAM_PROJECT_ROOT": project_root(config),
         "CREAM_DATA_DIR": data_dir(config),
@@ -473,6 +474,7 @@ def _shell_exports(config):
         "CREAM_TEST_LOG_DIR": os.path.join(
             path_setting(config, "log_dir"), setting(config, "env", "test_log_subdir")
         ),
+        "CREAM_VENV": _absolute(venv, project_root(config)) if venv else None,
         "CREAM_CONDA_ENV": setting(config, "env", "conda_env"),
         "CREAM_WANDB_PROJECT": wandb_project(config),
         "CUBLAS_WORKSPACE_CONFIG": setting(config, "env", "cublas_workspace_config"),

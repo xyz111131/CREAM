@@ -257,8 +257,8 @@ class LitModel(pl.LightningModule):
         res = self(batch)
         y_hat = res["y"]
         if self.eQTL_guided:
-            weights = batch["eQTL_array"].squeeze() # B * 1 * T * L
-            tss = batch["tss"].squeeze() * weights.shape[2]
+            weights = batch["eQTL_array"].squeeze(1) # B * 1 * T * L -> B * T * L, only the gene axis
+            tss = batch["tss"].squeeze(1) * weights.shape[2]
             tss = tss[0].int()
             attn_weights = res.get("attn_weights")
             attn_mask = res.get("attn_mask")

@@ -5,7 +5,7 @@
 #   source /path/to/scripts/cream_env.sh [config_path]
 #
 # Sets: CREAM_PROJECT_ROOT, CREAM_DATA_DIR, CREAM_RESULTS_DIR, CREAM_LOG_DIR,
-#       CREAM_TRAIN_LOG_DIR, CREAM_TEST_LOG_DIR, CREAM_CONDA_ENV,
+#       CREAM_TRAIN_LOG_DIR, CREAM_TEST_LOG_DIR, CREAM_VENV, CREAM_CONDA_ENV,
 #       CREAM_WANDB_PROJECT, CUBLAS_WORKSPACE_CONFIG.
 #
 # Values come from CREAM/configs/defaults.yaml merged with the config passed in.
@@ -30,6 +30,7 @@ else
     export CREAM_LOG_DIR=$CREAM_PROJECT_ROOT/$(_cream_get log_dir)
     export CREAM_TRAIN_LOG_DIR=$CREAM_LOG_DIR/$(_cream_get train_log_subdir)
     export CREAM_TEST_LOG_DIR=$CREAM_LOG_DIR/$(_cream_get test_log_subdir)
+    export CREAM_VENV=$CREAM_PROJECT_ROOT/$(_cream_get venv)
     export CREAM_CONDA_ENV=$(_cream_get conda_env)
     export CUBLAS_WORKSPACE_CONFIG=$(_cream_get cublas_workspace_config)
     unset _cream_get _cream_yaml

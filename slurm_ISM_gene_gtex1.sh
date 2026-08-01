@@ -14,9 +14,9 @@
 #SBATCH --job-name=gtex_ism
 ###SBATCH --nodelist=arrietty-h100-gpu03
 
-# project paths, conda env and CUBLAS_WORKSPACE_CONFIG come from the YAML config
+# project paths, virtualenv and CUBLAS_WORKSPACE_CONFIG come from the YAML config
 source "$(dirname "${BASH_SOURCE[0]}")/scripts/cream_env.sh"
-source activate "$CREAM_CONDA_ENV"
+source "$CREAM_VENV/bin/activate"
 
 # run from the project root so "python -m CREAM.<module>" always uses this checkout
 cd "$CREAM_PROJECT_ROOT"

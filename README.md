@@ -144,7 +144,7 @@ Two config keys:
 The bin edges themselves are defined at the top of `lit_model_cat.py` — Gaussian
 quantiles for normalized expression.
 Pass `expr_bin_edges` / `expr_bin_means` to the model to use your own, keeping
-`discretize_bins` in step.
+`discretize_bins` as the number of bins.
 
 
 ```bash
@@ -159,17 +159,12 @@ Pass `expr_bin_edges` / `expr_bin_means` to the model to use your own, keeping
 The launch configuration *"Python Debugger: train GTEX discrete test run with
 Arguments"* runs the same thing under the VS Code debugger.
 
-`load_callbacks` selects `MetricLogger_cat` whenever `discretize_bins > 0`, so the
-prediction CSVs carry `2 × discretize_bins` columns per row: the first
-`discretize_bins` are bin probabilities, summing to 1, and the rest are the
-matching offsets. `CrossIndivMetrics_*.csv` gains an `accuracy` column alongside
+`load_callbacks` selects `MetricLogger_cat` whenever `discretize_bins > 0`. 
+`CrossIndivMetrics_*.csv` gains an `accuracy` column alongside
 the usual `pearsonr` and `r2`, which are computed from the expectation above.
 
-Two limits worth knowing. `train_gtex2_cat.py` covers the
-`contrast_embed` + `atten_pool` model only and raises a clear error for the other
-variants, whose heads emit a different shape. And there is no discrete counterpart
-to `test_gtex.py` yet, so held-out evaluation still runs through the continuous
-path.
+There is no discrete counterpart
+to `test_gtex.py` yet, so held-out evaluation still runs through the training loop.
 
 ## Slurm jobs
 
@@ -186,7 +181,7 @@ caveat: a virtual environment is a thin layer over the interpreter it was built
 from, so that interpreter has to stay reachable from the compute nodes.
 `.venv/pyvenv.cfg` records which one it is.
 
-### What the fixture holds
+### Test data
 
 `testdata/` is a
 chr22-only slice of the real inputs, covering two donors, 8 train genes and 2 validation and test genes:

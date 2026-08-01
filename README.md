@@ -124,6 +124,53 @@ The launch configuration *"Python Debugger: train GTEX test run with Arguments"*
 runs the same thing under the VS Code debugger. Prefix the command with
 `WANDB_MODE=offline` to keep smoke runs out of the W&B project.
 
+### Discrete-continuous training
+
+The continuous model predicts one expression value per gene and tissue. The
+discrete-continuous model instead predicts a distribution over expression bins
+together with an offset from each bin's centre, which is what makes the
+uncertainty quantification possible: the predicted expression is the
+expectation `Σ pₖ · (meanₖ + offsetₖ)`, and the same distribution yields Shannon
+entropy and predictive variance.
+
+
+Two config keys:
+
+| Key | What it controls |
+| --- | --- |
+| `discretize_bins` | Number of expression categories. Must equal the number of bin means — 9 for normalized expression. The model raises on a mismatch rather than failing later on a shape error. |
+| `bin_offset_alpha` | Split between the two loss terms: `alpha · offset MAE + (1 - alpha) · bin cross entropy`. Defaults to 0.9. |
+
+The bin edges themselves are defined at the top of `lit_model_cat.py` — Gaussian
+quantiles for normalized expression.
+Pass `expr_bin_edges` / `expr_bin_means` to the model to use your own, keeping
+`discretize_bins` in step.
+
+
+```bash
+.venv/bin/python CREAM/train_gtex2_cat.py \
+    --config_path CREAM/configs/blood_config_test_cat.yaml \
+    --fold 0 \
+    --model_type MultiGene \
+    --num_gpus 1 \
+    --use_test_data
+```
+
+The launch configuration *"Python Debugger: train GTEX discrete test run with
+Arguments"* runs the same thing under the VS Code debugger.
+
+`load_callbacks` selects `MetricLogger_cat` whenever `discretize_bins > 0`, so the
+prediction CSVs carry `2 × discretize_bins` columns per row: the first
+`discretize_bins` are bin probabilities, summing to 1, and the rest are the
+matching offsets. `CrossIndivMetrics_*.csv` gains an `accuracy` column alongside
+the usual `pearsonr` and `r2`, which are computed from the expectation above.
+
+Two limits worth knowing. `train_gtex2_cat.py` covers the
+`contrast_embed` + `atten_pool` model only and raises a clear error for the other
+variants, whose heads emit a different shape. And there is no discrete counterpart
+to `test_gtex.py` yet, so held-out evaluation still runs through the continuous
+path.
+
 ## Slurm jobs
 
 The batch scripts activate the virtual environment, reading its location

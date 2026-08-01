@@ -134,18 +134,8 @@ class LitModel(pl.LightningModule):
         self.raw_expr = raw_expr
         self.contrast_embed = contrast_embed
         self.eQTL_guided = bool(eQTL_guided)
-        if self.raw_expr:
-            self.expr_bins = torch.tensor(
-                [0.2, 1, 2, 3]
-            ).cuda()  # hard coded for now. [-1, -0.3, 0.3, 1]
-            self.expr_bins_means = torch.tensor(
-                [0.1, 0.5, 1.5, 2.5, 4.2]
-            ).cuda()  # hard coded for now.  [-1.5, -0.62, 0, 0.62, 1.5]
-        else:
-            self.expr_bins = torch.tensor([-1, -0.3, 0.3, 1]).cuda()  # hard coded for now.
-            self.expr_bins_means = torch.tensor(
-                [-1.5, -0.62, 0, 0.62, 1.5]
-            ).cuda()  # hard coded for now.
+        # Expression bins live in LitModelCat (lit_model_cat.py), which is the
+        # base for models with a discretized head.
 
     @staticmethod
     def wandb_hook(run, step):

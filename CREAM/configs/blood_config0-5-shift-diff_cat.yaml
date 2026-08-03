@@ -1,0 +1,40 @@
+# for real data, discretized expression head
+# Discretized counterpart of blood_config0-5-shift-diff.yaml. Train with
+# CREAM.train_gtex2_cat and evaluate with CREAM.test_gtex_cat.
+seq_length: 49152
+learning_rate: 1e-5
+pct_start: 0.3
+final_div_factor: 1
+train_batch_size: 20
+num_individuals_per_gene: 20
+#train_batch_size: 24
+#num_individuals_per_gene: 24
+alpha: 0.5
+experiment_name: "attn2_1_pred_norm_3_tissue_discrete"
+max_epochs: 20
+precision: bf16-mixed
+tissues_to_train: "Whole_Blood,Muscle_Skeletal,Adipose_Subcutaneous"
+gradient_clip_val: 0.05
+seed: 2
+mask_dna_prop: 0
+# 9 categories, matching NORM_EXPR_BIN_MEANS in models/lit_model_cat.py
+discretize_bins: 9
+# weight on the per-bin offset MAE; the remainder goes to the bin cross entropy
+bin_offset_alpha: 0.9
+contrast_embed: 1
+stratify_expr: 0
+residual_expr: 0
+predict_expr: 0
+raw_expr: 0
+gene_embed: 0
+atten_pool: 1
+attn_dim: 256  # 256, 512
+attn_heads: 2 # 2, 4
+shift: 100
+shift_freq: 1
+reverse_complement: 0
+rc_freq: 0
+train_gene_file: "train_filter_egenes_5K.txt"
+val_gene_file: "val_filter_egenes_1K.txt"
+test_gene_file: "test_filter_egenes_2K.txt"
+expression_filepath: "gtex_eqtl_expression_matrix/GTEx_Analysis_v8_eQTL_expression_matrices"

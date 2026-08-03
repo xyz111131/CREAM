@@ -84,6 +84,27 @@
             ]
         },
         {
+            "name": "Python Debugger: eval GTEX discrete test run with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "CREAM/test_gtex_cat.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "--config_path",
+                "CREAM/configs/blood_config_test_cat.yaml",
+                "--fold",
+                "0",
+                "--model_type",
+                "MultiGene",
+                "--runid",
+                "bvhj5y5h",
+                "--num_gpus",
+                "1",
+                "--use_test_data",
+            ]
+        },
+        {
             "name": "Python Debugger: ISM genes CREAM with Arguments",
             "type": "debugpy",
             "request": "launch",

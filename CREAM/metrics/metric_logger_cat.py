@@ -75,9 +75,35 @@ class MetricLogger_cat(pl.Callback):
         )
         rank_df = rank_df.explode("rank")
 
-        df = pd.concat(
-            [pred_df, target_df[["y_true"]], donor_df[["donor"]], rank_df[["rank"]]], axis=1
-        )
+        if donor_split == 'test' and (pl_module.attn_dict): # only output attention weights during test time
+            attn_weights_df = pd.DataFrame(pl_module.attn_dict)
+            attn_weights_df = attn_weights_df.reset_index(names="tissue").melt(
+                id_vars=["tissue"], var_name="gene", value_name="attn_weights"
+            )
+            attn_weights_df["attn_weights"] = attn_weights_df["attn_weights"].apply(
+                lambda attn_weights: [[x.item() for x in ls ]for ls in attn_weights]
+            )
+            attn_weights_df = attn_weights_df.explode("attn_weights")
+            attn_weights_df['attn_weights'] = attn_weights_df['attn_weights'].apply(lambda x: ','.join(map(str,x)))
+
+            attn_inds_df = pd.DataFrame(pl_module.attn_inds_dict)
+            attn_inds_df = attn_inds_df.reset_index(names="tissue").melt(
+                id_vars=["tissue"], var_name="gene", value_name="attn_inds"
+            )
+            attn_inds_df["attn_inds"] = attn_inds_df["attn_inds"].apply(
+                lambda attn_inds: [[x.item() for x in ls ]for ls in attn_inds]
+            )
+            attn_inds_df = attn_inds_df.explode("attn_inds")
+            attn_inds_df['attn_inds'] = attn_inds_df['attn_inds'].apply(lambda x: ','.join(map(str,x)))
+
+            df = pd.concat(
+                [pred_df, target_df[["y_true"]], donor_df[["donor"]], rank_df[["rank"]],attn_inds_df[['attn_inds']], attn_weights_df[['attn_weights']]], axis=1
+            )
+        else:
+            df = pd.concat(
+                [pred_df, target_df[["y_true"]], donor_df[["donor"]], rank_df[["rank"]]], axis=1
+            )
+
         df["end_of_epoch"] = self.epoch
         # trainer.logger.experiment.log({'PredictionResults':wandb.Table(dataframe = df)})
         df.to_csv(
